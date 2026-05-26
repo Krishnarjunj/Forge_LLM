@@ -1,0 +1,34 @@
+# configs/model_30m.yaml
+# Locked in Phase C (docs/01_architecture.md §6).
+# Changes require an ADR in docs/DECISIONS.md.
+name: forge-30m
+
+# Model architecture ------------------------------------------------------
+n_layer: 6
+d_model: 512
+n_head: 8
+n_kv_head: 2          # GQA 4:1 (Llama-2-7B ratio)
+head_dim: 64          # d_model // n_head
+d_ff: 1408            # round_multiple(8/3 * d_model, multiple_of=256)
+vocab_size: 16384
+max_seq: 1024
+rope_theta: 10000.0
+norm_eps: 1.0e-5
+tie_embeddings: true
+init_std: 0.02
+dropout: 0.0
+
+# Architectural identifiers (informational; locked in code) ---------------
+activation: swiglu
+norm: rmsnorm
+position: rope
+attention: gqa
+
+# Parameter budget (verified in docs/01_architecture.md §6 table) ---------
+# Embedding (tied):        8,388,608
+# 6 × Block:              ~16.9M
+# Final RMSNorm:                 512
+# LM head:                   0 (tied)
+# Total:                  ~25.3M
+# NOTE: ADR-005 (Phase F) decides whether to bump n_layer 6 → 8 to land at
+# ~31.2M based on T4 memory headroom.

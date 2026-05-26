@@ -1,0 +1,77 @@
+# configs/train_kaggle_t4.yaml
+# Locked in Phase C (docs/03_training_plan.md). Phase F tightens micro_bs /
+# grad_accum and token_budget based on measured T4 throughput.
+
+# Data --------------------------------------------------------------------
+dataset:
+  source: "HuggingFaceFW/fineweb-edu"
+  config: "sample-10BT"
+  streaming: true
+  packing: "concat_chunk"     # concat docs with <eos> then chunk at max_seq
+
+# Effective batch math (docs/03_training_plan.md §2) ----------------------
+batch:
+  micro_bs: 8                  # ADR-008 baseline; Phase F may revise
+  grad_accum: 16
+  seq_len: 1024                # matches configs/model_30m.yaml max_seq
+  # micro_bs × grad_accum × seq_len = 131,072 tokens ≈ 128K effective
+
+# Optimizer (docs/03_training_plan.md §4) ---------------------------------
+optimizer:
+  name: "adamw"
+  lr: 3.0e-4
+  betas: [0.9, 0.95]
+  eps: 1.0e-8
+  weight_decay: 0.1
+  grad_clip_norm: 1.0
+
+# LR schedule (docs/03_training_plan.md §3) -------------------------------
+schedule:
+  name: "cosine"
+  warmup_steps: 1000
+  total_steps: 7800
+  min_lr: 3.0e-5
+
+# Mixed precision (docs/03_training_plan.md §5) ---------------------------
+precision:
+  dtype: "fp16"                # T4 has no native bf16
+  loss_scale_init: 65536       # 2**16
+  loss_scale_growth_interval: 2000
+  loss_scale_growth_factor: 2.0
+  loss_scale_backoff_factor: 0.5
+  fp32_softmax: true
+  fp32_norm: true
+
+# Checkpointing (docs/03_training_plan.md §6) -----------------------------
+checkpoint:
+  every_steps: 500
+  every_minutes: 30
+  keep_last_n: 3
+  keep_best: true
+  hub_repo: "<set via env or CLI; e.g. user/forge-llm-ckpts>"
+  kaggle_dataset: "<set via env or CLI; e.g. user/forge-llm-resume>"
+
+# Eval cadence (docs/03_training_plan.md §7) ------------------------------
+eval:
+  every_steps: 1000
+  wikitext103_valid_subset_seqs: 256
+  fineweb_held_out_seqs: 256
+  sample_prompts:
+    - "Once upon a time"
+    - "The capital of France is"
+    - "In a hole in the ground there lived"
+    - "The quick brown fox"
+    - "function add(a, b) {"
+
+# Token budget (docs/03_training_plan.md §8) ------------------------------
+budget:
+  total_tokens: 1_000_000_000  # 1B; ADR-009 may halve to 500M after Phase F
+  expected_tokens_per_sec: 6000
+  session_wall_minutes: 660    # 11h soft cap (12h Kaggle minus 1h cushion)
+
+# Logging (ADR-002) -------------------------------------------------------
+logging:
+  backend: "wandb"
+  project: "forge-llm"
+  run_name_prefix: "forge-30m-t4"
+  fallback_csv_dir: "runs"

@@ -1,0 +1,45 @@
+# Ruff config — lint + format. CI gate per docs/02_correctness_plan.md §2.
+
+target-version = "py311"
+line-length = 100
+src = ["src", "tests", "scripts"]
+
+[lint]
+select = [
+    "E",     # pycodestyle errors
+    "W",     # pycodestyle warnings
+    "F",     # pyflakes
+    "I",     # isort
+    "B",     # flake8-bugbear
+    "UP",    # pyupgrade
+    "SIM",   # flake8-simplify
+    "C4",    # flake8-comprehensions
+    "PIE",   # flake8-pie
+    "PL",    # pylint
+    "RUF",   # ruff-specific
+    "TID",   # flake8-tidy-imports
+]
+ignore = [
+    "E501",     # line length is enforced by the formatter, not the linter
+    "PLR0913",  # too many arguments — common in ML configs
+    "PLR2004",  # magic-value in tests is acceptable
+    "PLR0915",  # too many statements
+    "PLR0912",  # too many branches
+]
+
+[lint.per-file-ignores]
+"tests/**/*.py" = [
+    "PLR2004",  # tests use magic numbers as expected values
+    "S101",     # `assert` is the whole point in tests
+]
+"scripts/**/*.py" = [
+    "T201",     # `print` is OK in scripts
+]
+
+[lint.isort]
+known-first-party = ["forge_llm"]
+
+[format]
+quote-style = "double"
+indent-style = "space"
+docstring-code-format = true

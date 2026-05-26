@@ -1,0 +1,118 @@
+[build-system]
+requires = ["hatchling>=1.24"]
+build-backend = "hatchling.build"
+
+# Project metadata --------------------------------------------------------
+[project]
+name = "forge-llm"
+version = "0.0.0"
+description = "A from-scratch ~30M-parameter Llama-family decoder, trained on free Kaggle T4."
+readme = "README.md"
+requires-python = ">=3.11"
+license = { file = "LICENSE" }
+authors = [{ name = "Forge-LLM contributors" }]
+keywords = ["llm", "transformer", "pytorch", "gqa", "rope", "rmsnorm", "swiglu", "kv-cache"]
+classifiers = [
+    "Development Status :: 1 - Planning",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "License :: OSI Approved :: MIT License",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+    "Operating System :: OS Independent",
+]
+
+# Runtime dependencies (justified in docs/DECISIONS.md ADR-012) ------------
+dependencies = [
+    "torch>=2.2,<2.10",            # deep learning runtime
+    "numpy>=1.26,<3",              # RNG, tokenizer training arrays
+    "datasets>=2.18,<4",           # FineWeb-Edu streaming
+    "wandb>=0.17,<1",              # experiment tracking (ADR-002)
+    "huggingface_hub>=0.23,<1",    # HF Hub checkpoint upload
+    "pyyaml>=6,<7",                # configs/*.yaml loading
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=8",
+    "pytest-cov>=5",
+    "ruff>=0.4",
+    "mypy>=1.10",
+    # Oracles — imported ONLY from tests/ (see CLAUDE.md §2).
+    "transformers>=4.41,<5",
+    "tiktoken>=0.7,<1",
+]
+
+[project.urls]
+Homepage = "https://github.com/forge-llm/forge-llm"
+Repository = "https://github.com/forge-llm/forge-llm"
+Documentation = "https://github.com/forge-llm/forge-llm/tree/main/docs"
+Issues = "https://github.com/forge-llm/forge-llm/issues"
+
+# Console entrypoint (M12) ------------------------------------------------
+[project.scripts]
+forge-llm = "forge_llm.cli:main"
+
+# Hatchling packaging -----------------------------------------------------
+[tool.hatch.build.targets.wheel]
+packages = ["src/forge_llm"]
+
+[tool.hatch.build.targets.sdist]
+include = [
+    "src/forge_llm",
+    "configs",
+    "scripts",
+    "tests",
+    "docs",
+    "README.md",
+    "LICENSE",
+    "CLAUDE.md",
+    "CONTRIBUTING.md",
+    "BUILD_PLAN.md",
+    "forge_llm.md",
+    "pyproject.toml",
+]
+
+# Pytest config lives in pytest.ini (see file). Kept there because pytest.ini
+# takes precedence over pyproject.toml; duplicating creates drift.
+
+# Coverage config ---------------------------------------------------------
+[tool.coverage.run]
+branch = true
+source = ["src/forge_llm"]
+
+[tool.coverage.report]
+# Threshold per docs/02_correctness_plan.md §3. CI fails below this.
+fail_under = 85
+show_missing = true
+skip_covered = false
+exclude_lines = [
+    "pragma: no cover",
+    "raise NotImplementedError",
+    "if __name__ == .__main__.:",
+]
+omit = [
+    # See docs/02_correctness_plan.md §3 — exercised in Phase F preflight, not unit tests.
+    "src/forge_llm/train.py",
+    "src/forge_llm/data.py",
+    "src/forge_llm/cli.py",
+]
+
+# Mypy config -------------------------------------------------------------
+[tool.mypy]
+python_version = "3.11"
+files = ["src/forge_llm"]
+strict = true
+warn_unused_ignores = true
+warn_redundant_casts = true
+warn_unreachable = true
+disallow_untyped_defs = true
+no_implicit_optional = true
+show_error_codes = true
+
+[[tool.mypy.overrides]]
+module = "tests.*"
+disallow_untyped_defs = false
+strict = false
