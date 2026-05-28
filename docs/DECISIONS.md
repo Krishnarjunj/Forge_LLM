@@ -33,15 +33,18 @@
 
 ---
 
-## ADR-003 — CLI parser: `tyro` (OPEN)
+## ADR-003 — CLI parser: `argparse` (CLOSED)
 
-**Status:** Open — resolves in M12.
+**Status:** Accepted — 2026-05-28 (M12).
 
-**Decision (pending).** `tyro` or `argparse` for the `forge-llm` console entrypoint and for `python -m forge_llm.train`.
+**Decision.** Use stdlib `argparse` for the `forge-llm` console entrypoint and for the `python -m forge_llm.train` direct module entrypoint. No `tyro` dependency.
 
-**Context.** `tyro` integrates cleanly with `@dataclass` configs — it generates the CLI from the dataclass automatically. `argparse` is the stdlib default and has no external dep. The Forge-LLM dataclass has ~12 fields; both work.
+**Context.** Two candidates: `tyro` (auto-generates CLI from `@dataclass` fields) and `argparse` (stdlib). The deciding factors at M12 lock-in:
+- Every script and module CLI already written through M11 uses `argparse` (`scripts/train_bpe.py`, `scripts/eval_perplexity.py`, `scripts/benchmark_kv_cache.py`, `forge_llm.train.main`). Switching to `tyro` would mean rewriting four working CLIs to gain a single new dep.
+- The `forge-llm` entrypoint has four subcommands (`generate`, `train`, `eval`, `bench-cache`), each with a different argument surface. `tyro`'s "one dataclass → one CLI" sweet spot doesn't map cleanly onto subcommands without extra plumbing.
+- `argparse` subparsers handle this in ~100 LoC; the per-subcommand argument list is short enough that hand-writing it is not a maintenance burden.
 
-**Consequences.** If `tyro` is chosen, adds one dep. If `argparse` is chosen, we hand-write the field list. Decision: try `tyro` first in M12; if it adds friction or doesn't compose with subcommands cleanly, drop to `argparse`. Resolution criterion: write the CLI in `tyro` first; if `forge-llm generate --help` doesn't render cleanly within 30 minutes of effort, switch to `argparse`.
+**Consequences.** No external CLI-parser dep. `forge-llm --help` renders the standard argparse subcommand help. Future evolution: if any one subcommand grows enough config surface to warrant dataclass-driven auto-generation, that subcommand can be migrated to `tyro` in isolation without touching the others.
 
 ---
 

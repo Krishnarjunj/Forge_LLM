@@ -5,7 +5,7 @@ build-backend = "hatchling.build"
 # Project metadata --------------------------------------------------------
 [project]
 name = "forge-llm"
-version = "0.0.0"
+version = "0.1.0a1"
 description = "A from-scratch ~30M-parameter Llama-family decoder, trained on free Kaggle T4."
 readme = "README.md"
 requires-python = ">=3.11"

@@ -31,18 +31,34 @@ pytest -q -m "not slow"
 
 ## Quickstart
 
-```python
-# <TODO: filled at M12>
-from forge_llm import from_pretrained, generate
+Python API:
 
-model, tokenizer = from_pretrained("forge-llm/forge-30m")
-for token in generate(model, tokenizer, "Once upon a time", max_new=50, seed=0):
-    print(token, end="", flush=True)
+```python
+from forge_llm import generate
+from forge_llm.hub import from_pretrained
+from forge_llm.tokenizer import BPETokenizer
+
+tokenizer = BPETokenizer.load("path/to/checkpoint/tokenizer.json")
+trainer = from_pretrained("path/to/checkpoint", data_factory=lambda: iter([]))
+
+for piece in generate(
+    trainer.model, tokenizer, "Once upon a time",
+    max_new=50, seed=0,
+):
+    print(piece, end="", flush=True)
 ```
 
+Console:
+
 ```bash
-# <TODO: filled at M12>
-forge-llm generate "Once upon a time" --max-new 50 --seed 0
+forge-llm generate "Once upon a time" \
+    --checkpoint path/to/checkpoint \
+    --max-new 50 --seed 0
+
+# Other subcommands (each forwards to its module main):
+forge-llm train --config configs/model_30m.yaml --steps 100 --no-wandb
+forge-llm eval  --checkpoint path/to/checkpoint --dataset wikitext-103
+forge-llm bench-cache --ctx-lengths 128 512 2048
 ```
 
 ## Architecture
@@ -88,7 +104,7 @@ Full module DAG (Mermaid) in [`docs/01_architecture.md`](docs/01_architecture.md
 
 | Choice                  | Forge-LLM                              | GPT-2 / nanoGPT       |
 |-------------------------|----------------------------------------|----------------------|
-| Positional embedding    | RoPE (interleaved, ADR-007)            | learned absolute     |
+| Positional embedding    | RoPE (HF half-split, ADR-007)          | learned absolute     |
 | Attention               | Grouped-Query Attention (8Q / 2KV)     | vanilla MHA          |
 | Normalisation           | RMSNorm (pre-norm)                     | LayerNorm            |
 | Feedforward             | SwiGLU                                 | GELU MLP             |
