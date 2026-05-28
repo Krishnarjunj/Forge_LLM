@@ -3,6 +3,7 @@ __pycache__/
 *.py[cod]
 *$py.class
 *.so
+*.pyd
 
 # Distribution / packaging -----------------------------------------------
 .Python
@@ -18,27 +19,34 @@ parts/
 sdist/
 var/
 wheels/
+share/python-wheels/
 *.egg-info/
 *.egg
 MANIFEST
 pip-log.txt
 pip-delete-this-directory.txt
+pip-wheel-metadata/
 
 # Virtual environments ---------------------------------------------------
 .venv/
 venv/
 env/
 ENV/
+.python-version
 
 # Caches -----------------------------------------------------------------
 .pytest_cache/
 .ruff_cache/
 .mypy_cache/
+.pyre/
+.pytype/
 .coverage
 .coverage.*
+coverage.xml
 htmlcov/
 .tox/
 .nox/
+.cache/
 
 # Project run artefacts (per docs/03_training_plan.md §6) ----------------
 wandb/
@@ -46,12 +54,29 @@ runs/
 checkpoints/
 data/
 logs/
+tmp/
+scratch/
 *.ckpt
 *.safetensors
 *.bin
-!configs/*.bin    # if we ship a tokenizer.bin under configs/, keep it
+!configs/*.bin
 *.pt
 !tests/fixtures/*.pt
+
+# Training data shards (FineWeb-Edu, WikiText-103, etc.) -----------------
+*.parquet
+*.arrow
+*.jsonl
+*.npy
+*.npz
+
+# Profiling --------------------------------------------------------------
+*.prof
+*.lprof
+*.pstats
+
+# Logs -------------------------------------------------------------------
+*.log
 
 # Notebook checkpoints ---------------------------------------------------
 .ipynb_checkpoints/
@@ -61,15 +86,21 @@ logs/
 .DS_Store
 Thumbs.db
 
-# IDEs -------------------------------------------------------------------
+# IDEs / editors ---------------------------------------------------------
 .idea/
 .vscode/
 *.swp
 *.swo
 
+# Claude Code / local agent state ----------------------------------------
+.claude/
+CLAUDE.md
+resume_here.md
+
 # Local secrets — must never be committed --------------------------------
 .env
-.env.local
+.env.*
+!.env.example
 secrets/
 *.key
 *.pem
