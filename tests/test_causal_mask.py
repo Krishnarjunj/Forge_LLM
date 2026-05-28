@@ -19,9 +19,7 @@ from forge_llm.attention import GroupedQueryAttention
 
 def test_causal_mask_adversarial_no_future_leak() -> None:
     """Repeatedly mutating x[:, T-1, :] never changes y[:, :T-1, :] in any bit."""
-    mha = GroupedQueryAttention(
-        d_model=32, n_head=4, n_kv_head=4, head_dim=8, max_seq=64
-    )
+    mha = GroupedQueryAttention(d_model=32, n_head=4, n_kv_head=4, head_dim=8, max_seq=64)
 
     batch, seq_len, d_model = 4, 16, 32
     x = torch.randn(batch, seq_len, d_model)

@@ -95,8 +95,7 @@ def push_to_hub(
         from huggingface_hub import HfApi  # noqa: PLC0415
     except ImportError as exc:
         raise RuntimeError(
-            "push_to_hub requires `huggingface_hub`. "
-            "Install with: pip install huggingface_hub"
+            "push_to_hub requires `huggingface_hub`. Install with: pip install huggingface_hub"
         ) from exc
 
     if token is None:

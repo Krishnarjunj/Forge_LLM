@@ -92,9 +92,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     args = parser.parse_args(argv)
 
-    logging.basicConfig(
-        level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s"
-    )
+    logging.basicConfig(level=logging.INFO, format="%(asctime)s %(levelname)s %(message)s")
 
     max_seq = args.max_seq if args.max_seq is not None else max(args.ctx_lengths)
     if args.small:
@@ -136,16 +134,12 @@ def main(argv: list[str] | None = None) -> int:
     rows: list[tuple[int, float, float, float]] = []
     for ctx in args.ctx_lengths:
         if ctx > config.max_seq:
-            logger.warning(
-                "ctx=%d exceeds max_seq=%d; skipping", ctx, config.max_seq
-            )
+            logger.warning("ctx=%d exceeds max_seq=%d; skipping", ctx, config.max_seq)
             continue
         max_new = min(ctx, config.max_seq - 4)
         logger.info("ctx=%d (max_new=%d)", ctx, max_new)
         for _ in range(args.warmup):
-            _bench(
-                model, tokenizer, "the", max_new=8, use_cache=True, device=args.device
-            )
+            _bench(model, tokenizer, "the", max_new=8, use_cache=True, device=args.device)
         nocache = _bench(
             model, tokenizer, "the", max_new=max_new, use_cache=False, device=args.device
         )

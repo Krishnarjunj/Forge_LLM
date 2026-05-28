@@ -76,19 +76,13 @@ def test_generate_uses_cache_by_default() -> None:
 
     def wrapped(self, x, freqs_cis=None, cache=None, input_pos=None):  # type: ignore[no-untyped-def]
         saw_cache.append(cache is not None)
-        return real_forward(
-            self, x, freqs_cis=freqs_cis, cache=cache, input_pos=input_pos
-        )
+        return real_forward(self, x, freqs_cis=freqs_cis, cache=cache, input_pos=input_pos)
 
-    with patch.object(
-        type(model.model.layers[0].attn), "forward", wrapped
-    ):
+    with patch.object(type(model.model.layers[0].attn), "forward", wrapped):
         list(generate(model, tokenizer, "Forge", max_new=3, seed=0))
 
     assert saw_cache, "attention was never called"
-    assert all(saw_cache), (
-        "attention.forward saw cache=None somewhere; cache silently disabled"
-    )
+    assert all(saw_cache), "attention.forward saw cache=None somewhere; cache silently disabled"
 
 
 def test_generate_stops_on_eos() -> None:

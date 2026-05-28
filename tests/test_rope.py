@@ -95,9 +95,7 @@ def test_rope_relative_position_invariance() -> None:
     # Fix m - n = 3, sweep absolute positions. All scores must match.
     baseline = attn_score_at(5, 2)
     for m, n in [(10, 7), (20, 17), (30, 27), (50, 47)]:
-        torch.testing.assert_close(
-            attn_score_at(m, n), baseline, rtol=1e-5, atol=1e-5
-        )
+        torch.testing.assert_close(attn_score_at(m, n), baseline, rtol=1e-5, atol=1e-5)
 
 
 def test_rope_long_context_extrapolation() -> None:
@@ -118,9 +116,7 @@ def test_rope_long_context_extrapolation() -> None:
 
     # Direct recompute at position long_pos using the textbook RoPE formula.
     half = _HEAD_DIM // 2
-    inv_freq = 1.0 / (
-        _THETA ** (torch.arange(0, _HEAD_DIM, 2, dtype=torch.float32) / _HEAD_DIM)
-    )
+    inv_freq = 1.0 / (_THETA ** (torch.arange(0, _HEAD_DIM, 2, dtype=torch.float32) / _HEAD_DIM))
     assert inv_freq.shape == (half,)
     angles = long_pos * inv_freq
     cos_naive = torch.cos(angles)

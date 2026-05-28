@@ -71,9 +71,7 @@ def test_byte_ppl_uniform_logits_matches_closed_form() -> None:
     bytes_count = len(text.encode("utf-8"))
     expected = math.exp((len(tokens) - 1) * math.log(vocab_size) / bytes_count)
     assert math.isfinite(ppl)
-    torch.testing.assert_close(
-        torch.tensor(ppl), torch.tensor(expected), rtol=1e-5, atol=1e-5
-    )
+    torch.testing.assert_close(torch.tensor(ppl), torch.tensor(expected), rtol=1e-5, atol=1e-5)
 
 
 def test_byte_ppl_untrained_model_is_finite_and_positive() -> None:

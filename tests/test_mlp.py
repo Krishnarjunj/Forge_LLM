@@ -76,20 +76,12 @@ def test_swiglu_uses_silu_not_gelu() -> None:
     d_model, d_ff = 2, 2
     mlp = SwiGLU(d_model=d_model, d_ff=d_ff).double()
     with torch.no_grad():
-        mlp.w_gate.weight.copy_(
-            torch.tensor([[1.0, 0.0], [0.0, 0.0]], dtype=torch.float64)
-        )
-        mlp.w_up.weight.copy_(
-            torch.tensor([[0.0, 1.0], [0.0, 0.0]], dtype=torch.float64)
-        )
-        mlp.w_down.weight.copy_(
-            torch.tensor([[1.0, 0.0], [0.0, 0.0]], dtype=torch.float64)
-        )
+        mlp.w_gate.weight.copy_(torch.tensor([[1.0, 0.0], [0.0, 0.0]], dtype=torch.float64))
+        mlp.w_up.weight.copy_(torch.tensor([[0.0, 1.0], [0.0, 0.0]], dtype=torch.float64))
+        mlp.w_down.weight.copy_(torch.tensor([[1.0, 0.0], [0.0, 0.0]], dtype=torch.float64))
 
     x = torch.tensor([[[2.0, 3.0]]], dtype=torch.float64)
-    expected_index_0 = (
-        2.0 * torch.sigmoid(torch.tensor(2.0, dtype=torch.float64)).item() * 3.0
-    )
+    expected_index_0 = 2.0 * torch.sigmoid(torch.tensor(2.0, dtype=torch.float64)).item() * 3.0
     out = mlp(x).flatten()
     assert abs(out[0].item() - expected_index_0) < 1e-7, (
         f"SwiGLU output index 0 = {out[0].item()}, expected SiLU value "

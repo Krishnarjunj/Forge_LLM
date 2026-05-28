@@ -151,11 +151,7 @@ class BPETokenizer:
                 merged: list[int] = []
                 i = 0
                 while i < n:
-                    if (
-                        i + 1 < n
-                        and word[i] == best_a
-                        and word[i + 1] == best_b
-                    ):
+                    if i + 1 < n and word[i] == best_a and word[i + 1] == best_b:
                         merged.append(new_id)
                         i += 2
                     else:
@@ -243,8 +239,7 @@ class BPETokenizer:
         version = payload.get("version")
         if version != _FORMAT_VERSION:
             raise ValueError(
-                f"unsupported tokenizer file version: {version} "
-                f"(expected {_FORMAT_VERSION})"
+                f"unsupported tokenizer file version: {version} (expected {_FORMAT_VERSION})"
             )
         vocab_size = int(payload["vocab_size"])
         merges = [(int(a), int(b)) for a, b in payload["merges"]]

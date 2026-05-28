@@ -15,7 +15,7 @@ Initialisation follows the recipe in docs/01_architecture.md sec 7:
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 import torch
 from torch import Tensor, nn
@@ -50,9 +50,7 @@ class ForgeModel(nn.Module):
             ]
         )
         self.norm = RMSNorm(config.d_model, eps=config.norm_eps)
-        freqs = precompute_freqs_cis(
-            config.head_dim, config.max_seq, config.rope_theta
-        )
+        freqs = precompute_freqs_cis(config.head_dim, config.max_seq, config.rope_theta)
         self.register_buffer("freqs_cis", freqs, persistent=False)
 
     def forward(
@@ -73,7 +71,7 @@ class ForgeModel(nn.Module):
         for i, block in enumerate(self.layers):
             layer_cache = cache[i] if cache is not None else None
             x = block(x, self.freqs_cis, cache=layer_cache, input_pos=input_pos)
-        return self.norm(x)
+        return cast(Tensor, self.norm(x))
 
 
 class ForgeForCausalLM(nn.Module):
@@ -107,6 +105,7 @@ class ForgeForCausalLM(nn.Module):
         # GPT-2 residual scaling on the second linear in each residual branch.
         scale = (2 * self.config.n_layer) ** -0.5
         for block in self.model.layers:
+            assert isinstance(block, TransformerBlock)
             with torch.no_grad():
                 block.attn.wo.weight.mul_(scale)
                 block.mlp.w_down.weight.mul_(scale)
@@ -122,4 +121,4 @@ class ForgeForCausalLM(nn.Module):
         Shape: ``input_ids`` is ``(B, T)`` int; returns ``(B, T, vocab_size)``.
         """
         hidden = self.model(input_ids, cache=cache, input_pos=input_pos)
-        return self.lm_head(hidden)
+        return cast(Tensor, self.lm_head(hidden))

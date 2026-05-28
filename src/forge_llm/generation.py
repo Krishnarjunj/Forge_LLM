@@ -117,7 +117,5 @@ def generate(
                 step_pos = torch.tensor([len(history) - 1], device=device_t)
                 logits_step = model(step_input, cache=cache, input_pos=step_pos)
             else:
-                logits_step = model(
-                    torch.tensor([history], device=device_t, dtype=torch.long)
-                )
+                logits_step = model(torch.tensor([history], device=device_t, dtype=torch.long))
             next_logits = logits_step[:, -1, :]

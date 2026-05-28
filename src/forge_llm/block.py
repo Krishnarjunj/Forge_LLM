@@ -12,7 +12,7 @@ M8 just unpacks the dataclass into this signature.
 
 from __future__ import annotations
 
-from typing import Any
+from typing import Any, cast
 
 from torch import Tensor, nn
 
@@ -60,7 +60,5 @@ class TransformerBlock(nn.Module):
         threaded through to the attention layer for the M11 generation path.
         Returns ``(B, T, d_model)`` with the same dtype as ``x``.
         """
-        h = x + self.attn(
-            self.norm1(x), freqs_cis=freqs_cis, cache=cache, input_pos=input_pos
-        )
-        return h + self.mlp(self.norm2(h))
+        h = x + self.attn(self.norm1(x), freqs_cis=freqs_cis, cache=cache, input_pos=input_pos)
+        return cast(Tensor, h + self.mlp(self.norm2(h)))

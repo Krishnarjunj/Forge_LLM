@@ -44,8 +44,7 @@ class ForgeConfig:
             raise ValueError(f"n_kv_head must be positive, got {self.n_kv_head}")
         if self.n_head % self.n_kv_head != 0:
             raise ValueError(
-                f"n_head ({self.n_head}) must be divisible by "
-                f"n_kv_head ({self.n_kv_head})"
+                f"n_head ({self.n_head}) must be divisible by n_kv_head ({self.n_kv_head})"
             )
         if self.head_dim * self.n_head != self.d_model:
             raise ValueError(
@@ -54,13 +53,9 @@ class ForgeConfig:
                 f"d_model ({self.d_model})"
             )
         if self.head_dim % 2 != 0:
-            raise ValueError(
-                f"head_dim ({self.head_dim}) must be even (for RoPE)"
-            )
+            raise ValueError(f"head_dim ({self.head_dim}) must be even (for RoPE)")
         if self.vocab_size <= 0:
-            raise ValueError(
-                f"vocab_size must be positive, got {self.vocab_size}"
-            )
+            raise ValueError(f"vocab_size must be positive, got {self.vocab_size}")
         if self.max_seq <= 0:
             raise ValueError(f"max_seq must be positive, got {self.max_seq}")
         if self.n_layer <= 0:

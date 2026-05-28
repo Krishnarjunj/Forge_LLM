@@ -95,12 +95,10 @@ def eval_byte_perplexity(
 # ---------------------------------------------------------------------------
 
 
-def _stream_wikitext(
-    split: str = "validation", max_texts: int | None = None
-) -> Iterator[str]:
+def _stream_wikitext(split: str = "validation", max_texts: int | None = None) -> Iterator[str]:
     """Stream WikiText-103 valid split via HF datasets; hard-fail if offline."""
     try:
-        from datasets import load_dataset  # noqa: PLC0415
+        from datasets import load_dataset  # type: ignore[import-untyped]  # noqa: PLC0415
     except ImportError as exc:
         raise RuntimeError(
             "eval --dataset wikitext-103 requires the `datasets` package. "
@@ -115,8 +113,7 @@ def _stream_wikitext(
         )
     except (ConnectionError, OSError, ValueError) as exc:
         raise RuntimeError(
-            f"failed to open Salesforce/wikitext (split={split}): {exc}. "
-            "Are you online?"
+            f"failed to open Salesforce/wikitext (split={split}): {exc}. Are you online?"
         ) from exc
     for i, row in enumerate(ds):
         if max_texts is not None and i >= max_texts:
@@ -171,9 +168,7 @@ def main(argv: list[str] | None = None) -> int:
     from forge_llm.hub import from_pretrained  # noqa: PLC0415
 
     tokenizer = BPETokenizer.load(args.checkpoint / "tokenizer.json")
-    trainer = from_pretrained(
-        args.checkpoint, data_factory=lambda: iter([]), device=args.device
-    )
+    trainer = from_pretrained(args.checkpoint, data_factory=lambda: iter([]), device=args.device)
 
     if args.dataset == "wikitext-103":
         texts: Iterator[str] = _stream_wikitext(max_texts=args.max_texts)

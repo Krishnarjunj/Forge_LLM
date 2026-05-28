@@ -14,7 +14,7 @@ mixed-precision stability per CLAUDE.md sec 6.
 from __future__ import annotations
 
 import math
-from typing import Any
+from typing import Any, cast
 
 import torch
 import torch.nn.functional as F
@@ -44,9 +44,7 @@ class GroupedQueryAttention(nn.Module):
                 f"({n_head} * {head_dim} = {n_head * head_dim})"
             )
         if n_head % n_kv_head != 0:
-            raise ValueError(
-                f"n_head ({n_head}) must be divisible by n_kv_head ({n_kv_head})"
-            )
+            raise ValueError(f"n_head ({n_head}) must be divisible by n_kv_head ({n_kv_head})")
         self.d_model: int = d_model
         self.n_head: int = n_head
         self.n_kv_head: int = n_kv_head
@@ -63,9 +61,7 @@ class GroupedQueryAttention(nn.Module):
         # diagonal so softmax pushes those entries to exactly zero regardless
         # of the (finite) score value -- this is what makes the adversarial
         # leak test pass byte-identically rather than approximately.
-        mask = torch.triu(
-            torch.full((max_seq, max_seq), float("-inf")), diagonal=1
-        )
+        mask = torch.triu(torch.full((max_seq, max_seq), float("-inf")), diagonal=1)
         self.register_buffer("_causal_mask", mask, persistent=False)
 
     def forward(
@@ -90,21 +86,9 @@ class GroupedQueryAttention(nn.Module):
         """
         bsz, seq_len, _ = x.shape
 
-        q = (
-            self.wq(x)
-            .view(bsz, seq_len, self.n_head, self.head_dim)
-            .transpose(1, 2)
-        )
-        k = (
-            self.wk(x)
-            .view(bsz, seq_len, self.n_kv_head, self.head_dim)
-            .transpose(1, 2)
-        )
-        v = (
-            self.wv(x)
-            .view(bsz, seq_len, self.n_kv_head, self.head_dim)
-            .transpose(1, 2)
-        )
+        q = self.wq(x).view(bsz, seq_len, self.n_head, self.head_dim).transpose(1, 2)
+        k = self.wk(x).view(bsz, seq_len, self.n_kv_head, self.head_dim).transpose(1, 2)
+        v = self.wv(x).view(bsz, seq_len, self.n_kv_head, self.head_dim).transpose(1, 2)
 
         if cache is not None:
             if input_pos is None or freqs_cis is None:
@@ -119,9 +103,7 @@ class GroupedQueryAttention(nn.Module):
             # Build the causal mask between new positions and cache positions.
             cache_positions = torch.arange(end, device=x.device)
             mask_bool = cache_positions[None, :] > input_pos[:, None]
-            mask = torch.zeros(
-                (input_pos.shape[0], end), dtype=q.dtype, device=q.device
-            )
+            mask = torch.zeros((input_pos.shape[0], end), dtype=q.dtype, device=q.device)
             mask.masked_fill_(mask_bool, float("-inf"))
         else:
             if freqs_cis is not None:
@@ -144,4 +126,4 @@ class GroupedQueryAttention(nn.Module):
 
         out = torch.matmul(attn, v)
         out = out.transpose(1, 2).reshape(bsz, seq_len, self.d_model)
-        return self.wo(out)
+        return cast(Tensor, self.wo(out))

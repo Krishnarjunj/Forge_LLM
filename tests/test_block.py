@@ -78,6 +78,7 @@ def test_block_value_vs_llama_decoder_layer() -> None:
         attention_dropout=0.0,
         mlp_bias=False,
         hidden_act="silu",
+        attn_implementation="eager",
     )
     ours = _make_block()
     theirs = LlamaDecoderLayer(config, layer_idx=0)
@@ -99,9 +100,7 @@ def test_block_value_vs_llama_decoder_layer() -> None:
     x = torch.randn(2, seq_len, _D_MODEL)
 
     ours_out = ours(x, fc)
-    causal = torch.triu(
-        torch.full((seq_len, seq_len), float("-inf")), diagonal=1
-    )
+    causal = torch.triu(torch.full((seq_len, seq_len), float("-inf")), diagonal=1)
     layer_out = theirs(
         hidden_states=x,
         position_embeddings=(cos, sin),

@@ -27,9 +27,7 @@ def precompute_freqs_cis(
     """
     if head_dim % 2 != 0:
         raise ValueError(f"head_dim must be even, got {head_dim}")
-    inv_freq = 1.0 / (
-        theta ** (torch.arange(0, head_dim, 2, dtype=torch.float32) / head_dim)
-    )
+    inv_freq = 1.0 / (theta ** (torch.arange(0, head_dim, 2, dtype=torch.float32) / head_dim))
     positions = torch.arange(max_seq, dtype=torch.float32)
     angles = torch.outer(positions, inv_freq)
     return torch.polar(torch.ones_like(angles), angles)

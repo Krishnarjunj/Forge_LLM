@@ -75,9 +75,7 @@ def _read_local_corpus(path: Path) -> Iterator[str]:
 def _train(corpus: Iterable[str], vocab_size: int, out: Path) -> None:
     docs = list(corpus)
     total_bytes = sum(len(d.encode("utf-8")) for d in docs)
-    logger.info(
-        "collected %d documents (~%.1f MB UTF-8)", len(docs), total_bytes / 1_000_000
-    )
+    logger.info("collected %d documents (~%.1f MB UTF-8)", len(docs), total_bytes / 1_000_000)
     if not docs:
         raise RuntimeError("corpus is empty; cannot train BPE")
 

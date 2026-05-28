@@ -71,8 +71,7 @@ def test_model_embeddings_are_tied() -> None:
     cfg = _small_config()
     model = ForgeForCausalLM(cfg)
     assert model.lm_head.weight is model.embed_tokens.weight, (
-        "lm_head.weight is not the same tensor as embed_tokens.weight; "
-        "embedding tying is broken."
+        "lm_head.weight is not the same tensor as embed_tokens.weight; embedding tying is broken."
     )
 
 

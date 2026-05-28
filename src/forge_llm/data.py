@@ -93,7 +93,7 @@ def fineweb_doc_iterator(
     """
     try:
         # Lazy import so unit tests don't pay the import cost.
-        from datasets import load_dataset  # noqa: PLC0415
+        from datasets import load_dataset  # type: ignore[import-untyped]  # noqa: PLC0415
     except ImportError as exc:
         raise RuntimeError(
             "forge_llm.data.fineweb_doc_iterator requires `datasets`. "
@@ -102,9 +102,7 @@ def fineweb_doc_iterator(
 
     logger.info("opening %s (config=%s) in streaming mode", dataset_name, dataset_config)
     try:
-        ds = load_dataset(
-            dataset_name, name=dataset_config, split=split, streaming=True
-        )
+        ds = load_dataset(dataset_name, name=dataset_config, split=split, streaming=True)
     except (ConnectionError, OSError, ValueError) as exc:
         raise RuntimeError(
             f"failed to open {dataset_name} ({dataset_config}): {exc}. "

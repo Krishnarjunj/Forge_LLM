@@ -75,9 +75,7 @@ def _cmd_generate(args: argparse.Namespace) -> int:
     tokenizer = BPETokenizer.load(args.checkpoint / "tokenizer.json")
     # from_pretrained needs a data_factory for the Trainer's stateful dataset,
     # but generate() only touches model.* -- supply an empty stub stream.
-    trainer = from_pretrained(
-        args.checkpoint, data_factory=lambda: iter([]), device=args.device
-    )
+    trainer = from_pretrained(args.checkpoint, data_factory=lambda: iter([]), device=args.device)
     for piece in generate(
         trainer.model,
         tokenizer,
@@ -116,7 +114,6 @@ def main(argv: list[str] | None = None) -> int:
     if args.cmd == "generate":
         return _cmd_generate(args)
     parser.error(f"unknown subcommand: {args.cmd}")
-    return 2
 
 
 if __name__ == "__main__":

@@ -32,7 +32,10 @@ import numpy as np
 import torch
 import torch.nn.functional as F
 from torch import Tensor, nn
-from torch.amp import GradScaler, autocast
+from torch.amp import (  # type: ignore[attr-defined]  # not in torch.amp __all__ but is the documented API
+    GradScaler,
+    autocast,
+)
 
 from forge_llm.config import PRESETS, ForgeConfig
 from forge_llm.data import PackedDataset, fineweb_doc_iterator
@@ -211,9 +214,7 @@ class Trainer:
         self.model.train()
         losses: list[float] = []
 
-        amp_enabled = (
-            self.train_config.dtype == "fp16" and self.device.type == "cuda"
-        )
+        amp_enabled = self.train_config.dtype == "fp16" and self.device.type == "cuda"
 
         for _ in range(n_steps):
             self._set_lr(self._state.step)
@@ -229,7 +230,7 @@ class Trainer:
                     loss = self._forward_loss(batch)
                 # Scale by 1/grad_accum so gradients average across micro-batches.
                 loss = loss / self.train_config.grad_accum
-                self.scaler.scale(loss).backward()
+                self.scaler.scale(loss).backward()  # type: ignore[no-untyped-call]  # GradScaler.scale returns Tensor with untyped backward stub
                 accumulated_loss += loss.detach().item()
 
             self.scaler.unscale_(self.optimizer)
@@ -287,9 +288,7 @@ class Trainer:
         force: bool = False,
     ) -> Trainer:
         """Reconstitute a Trainer from a checkpoint and the runtime-only deps."""
-        ckpt: dict[str, Any] = torch.load(
-            Path(path), map_location=device, weights_only=False
-        )
+        ckpt: dict[str, Any] = torch.load(Path(path), map_location=device, weights_only=False)
         model_config = ForgeConfig(**ckpt["model_config_dict"])
         train_cfg_dict = dict(ckpt["train_config_dict"])
         # Tuples become lists in dataclass-asdict-then-json round trips;
@@ -351,7 +350,7 @@ def _mock_factory() -> Iterator[str]:
 
 def _load_model_yaml(path: Path) -> dict[str, Any]:
     try:
-        import yaml  # noqa: PLC0415
+        import yaml  # type: ignore[import-untyped]  # noqa: PLC0415 — pyyaml has no stubs in our dev set
     except ImportError as exc:
         raise RuntimeError(
             "Loading a YAML config requires `pyyaml`. Install with: pip install pyyaml"
@@ -440,9 +439,7 @@ def main(argv: list[str] | None = None) -> int:
 
     if args.mock_data:
         factory: Callable[[], Iterator[str]] = _mock_factory
-        tokenizer = BPETokenizer.train(
-            " ".join(_MOCK_DOCS), vocab_size=model_config.vocab_size
-        )
+        tokenizer = BPETokenizer.train(" ".join(_MOCK_DOCS), vocab_size=model_config.vocab_size)
     else:
         # Non-mock data path lands in Phase F when configs/tokenizer.json
         # exists and FineWeb-Edu streaming is wired in via fineweb_doc_iterator.
@@ -463,9 +460,7 @@ def main(argv: list[str] | None = None) -> int:
     )
     logger.info("starting %d-step smoke run on %s", args.steps, args.device)
     losses = trainer.train_steps(args.steps)
-    logger.info(
-        "done. losses: %s", [f"{x:.4f}" for x in losses]
-    )
+    logger.info("done. losses: %s", [f"{x:.4f}" for x in losses])
     return 0
 
 

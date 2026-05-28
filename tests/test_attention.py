@@ -79,16 +79,12 @@ def test_mha_value_vs_torch_reference() -> None:
         dropout=0.0,
     )
     with torch.no_grad():
-        oracle.in_proj_weight.copy_(
-            torch.cat([mha.wq.weight, mha.wk.weight, mha.wv.weight], dim=0)
-        )
+        oracle.in_proj_weight.copy_(torch.cat([mha.wq.weight, mha.wk.weight, mha.wv.weight], dim=0))
         oracle.out_proj.weight.copy_(mha.wo.weight)
 
     seq_len = 8
     x = torch.randn(2, seq_len, _D_MODEL)
-    causal_mask = torch.triu(
-        torch.full((seq_len, seq_len), float("-inf")), diagonal=1
-    )
+    causal_mask = torch.triu(torch.full((seq_len, seq_len), float("-inf")), diagonal=1)
 
     ours = mha(x)
     theirs, _ = oracle(x, x, x, attn_mask=causal_mask, need_weights=False)
@@ -107,16 +103,14 @@ def test_mha_causal_no_leak() -> None:
     x_mut[:, seq_len - 1, :] = torch.randn(batch, _D_MODEL)
     y_mut = mha(x_mut)
 
-    assert torch.equal(
-        y_orig[:, : seq_len - 1, :], y_mut[:, : seq_len - 1, :]
-    ), "Causal mask leak: output at t < T-1 changed after mutating x[T-1]"
+    assert torch.equal(y_orig[:, : seq_len - 1, :], y_mut[:, : seq_len - 1, :]), (
+        "Causal mask leak: output at t < T-1 changed after mutating x[T-1]"
+    )
 
 
 def test_mha_backward() -> None:
     """``gradcheck`` on a tiny fp64 forward catches bad gradient routing."""
-    mha = GroupedQueryAttention(
-        d_model=8, n_head=2, n_kv_head=2, head_dim=4, max_seq=16
-    ).double()
+    mha = GroupedQueryAttention(d_model=8, n_head=2, n_kv_head=2, head_dim=4, max_seq=16).double()
     x = torch.randn(1, 4, 8, dtype=torch.float64, requires_grad=True)
     assert torch.autograd.gradcheck(mha, (x,))
 
@@ -195,12 +189,8 @@ def test_gqa_reduces_to_mha_when_kv_eq_q() -> None:
         mha.wo.weight.copy_(gqa.wo.weight)
         gqa_wk = gqa.wk.weight.view(n_kv_head_small, head_dim, d_model)
         gqa_wv = gqa.wv.weight.view(n_kv_head_small, head_dim, d_model)
-        mha.wk.weight.copy_(
-            gqa_wk.repeat_interleave(n_rep, dim=0).view(n_head * head_dim, d_model)
-        )
-        mha.wv.weight.copy_(
-            gqa_wv.repeat_interleave(n_rep, dim=0).view(n_head * head_dim, d_model)
-        )
+        mha.wk.weight.copy_(gqa_wk.repeat_interleave(n_rep, dim=0).view(n_head * head_dim, d_model))
+        mha.wv.weight.copy_(gqa_wv.repeat_interleave(n_rep, dim=0).view(n_head * head_dim, d_model))
 
     x = torch.randn(2, 8, d_model)
     torch.testing.assert_close(gqa(x), mha(x), rtol=1e-6, atol=1e-6)
@@ -228,6 +218,7 @@ def test_gqa_value_vs_llama_attention() -> None:
         rope_theta=10000.0,
         attention_bias=False,
         attention_dropout=0.0,
+        attn_implementation="eager",
     )
     ours = GroupedQueryAttention(
         d_model=d_model,
@@ -295,9 +286,9 @@ def test_gqa_causal_no_leak() -> None:
     x_mut = x.clone()
     x_mut[:, seq_len - 1, :] = torch.randn(batch, _GQA_D_MODEL)
     y_mut = gqa(x_mut)
-    assert torch.equal(
-        y_orig[:, : seq_len - 1, :], y_mut[:, : seq_len - 1, :]
-    ), "Causal mask leak in GQA: output at t < T-1 changed after mutating x[T-1]"
+    assert torch.equal(y_orig[:, : seq_len - 1, :], y_mut[:, : seq_len - 1, :]), (
+        "Causal mask leak in GQA: output at t < T-1 changed after mutating x[T-1]"
+    )
 
 
 def test_gqa_with_rope_value_vs_llama() -> None:
@@ -322,6 +313,7 @@ def test_gqa_with_rope_value_vs_llama() -> None:
         rope_theta=10000.0,
         attention_bias=False,
         attention_dropout=0.0,
+        attn_implementation="eager",
     )
     ours = GroupedQueryAttention(
         d_model=d_model,
@@ -356,8 +348,6 @@ def test_gqa_with_rope_value_vs_llama() -> None:
 
 def test_gqa_backward() -> None:
     """``gradcheck`` through the ``n_rep > 1`` path on a tiny fp64 GQA."""
-    gqa = GroupedQueryAttention(
-        d_model=8, n_head=4, n_kv_head=2, head_dim=2, max_seq=16
-    ).double()
+    gqa = GroupedQueryAttention(d_model=8, n_head=4, n_kv_head=2, head_dim=2, max_seq=16).double()
     x = torch.randn(1, 4, 8, dtype=torch.float64, requires_grad=True)
     assert torch.autograd.gradcheck(gqa, (x,))

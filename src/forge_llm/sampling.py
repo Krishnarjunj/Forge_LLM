@@ -59,9 +59,7 @@ def apply_temperature(logits: Tensor, temperature: float) -> Tensor:
     return logits / temperature
 
 
-def repetition_penalty(
-    logits: Tensor, history: Tensor, penalty: float
-) -> Tensor:
+def repetition_penalty(logits: Tensor, history: Tensor, penalty: float) -> Tensor:
     """Apply the CTRL-paper repetition penalty in place over ``history`` token ids.
 
     For each token id ``i`` in ``history``: if ``logits[..., i] > 0`` divide

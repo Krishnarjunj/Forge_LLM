@@ -7,6 +7,8 @@ and ``w_down`` (``d_ff -> d_model``). Forward computes
 
 from __future__ import annotations
 
+from typing import cast
+
 import torch.nn.functional as F
 from torch import Tensor, nn
 
@@ -26,4 +28,4 @@ class SwiGLU(nn.Module):
         Shape: ``x`` is ``(..., d_model)``; the return has the same shape and
         the same dtype as ``x``.
         """
-        return self.w_down(F.silu(self.w_gate(x)) * self.w_up(x))
+        return cast(Tensor, self.w_down(F.silu(self.w_gate(x)) * self.w_up(x)))
