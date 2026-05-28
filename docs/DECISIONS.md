@@ -81,15 +81,21 @@
 
 ---
 
-## ADR-007 — RoPE convention: Llama interleaved (CLOSED)
+## ADR-007 — RoPE convention: HF Llama half-split (CLOSED)
 
-**Status:** Accepted — 2026-05-26 (Phase C; will be re-confirmed in M3 once code lands).
+**Status:** Accepted — 2026-05-26 (Phase C). **Amended — 2026-05-28 (M3)** after verifying the actual HF source; see "Amendment" below.
 
-**Decision.** Use the **Llama interleaved RoPE convention**: rotate adjacent pairs `(x_{2i}, x_{2i+1})` rather than the original-paper paired convention `(x_i, x_{i + d/2})`.
+**Decision.** Use the **HF Llama half-split RoPE convention**: rotate halves `(x[:d/2], x[d/2:])` via the formula `y = x*cos + rotate_half(x)*sin` where `rotate_half([a, b]) = [-b, a]`. This is what `transformers.models.llama.modeling_llama.apply_rotary_pos_emb` actually does.
 
-**Context.** The two conventions are isomorphic up to a permutation of the head-dimension axis, but they are *not* bitwise-compatible. The HF Llama oracle uses interleaved. We compare against the HF Llama oracle for value tests. Therefore Forge-LLM must use interleaved too — otherwise the oracle test produces a misleading failure.
+**Context.** Two conventions exist in the wild:
+- **Meta interleaved** — rotate adjacent pairs `(x_{2i}, x_{2i+1})`. Used by Meta's original Llama reference and by some llama.cpp paths.
+- **HF half-split** — rotate halves `(x_i, x_{i + d/2})`. Used by HuggingFace `transformers`.
 
-**Consequences.** `apply_rotary(q, k, freqs_cis)` in `src/forge_llm/rope.py` MUST implement interleaved rotation. The test `test_rope_value_vs_llama` is the binding correctness gate. The decision is recorded here so a future re-read of `rope.py` doesn't accidentally "fix" it to the paper convention.
+The two are isomorphic up to a per-head permutation of W_Q and W_K, but they are *not* bitwise-compatible on the same raw weights. Our value-test oracle is HF's `apply_rotary_pos_emb`; matching the oracle by construction (rather than via permutation gymnastics inside the test) is operationally simpler and means M4+ attention can consume rotated q/k without an extra layout transform.
+
+**Consequences.** `apply_rotary(q, k, freqs_cis)` in `src/forge_llm/rope.py` MUST implement HF half-split. The test `test_rope_value_vs_llama` is the binding correctness gate and compares against HF's `apply_rotary_pos_emb` directly with no permutation around the call. If we ever load a Meta-Llama checkpoint, W_Q/W_K need permuting at load time — a one-line transform documented at that load site.
+
+**Amendment (2026-05-28, M3).** The original ADR text claimed "HF Llama oracle uses interleaved" and prescribed Meta interleaved. That was factually wrong — `transformers/models/llama/modeling_llama.py::rotate_half` splits halves, not adjacent pairs. M3 corrects the decision to match what HF actually does. The intent (match the HF oracle) is preserved; only the description of HF's convention is fixed.
 
 ---
 

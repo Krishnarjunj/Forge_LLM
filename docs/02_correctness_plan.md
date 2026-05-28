@@ -42,7 +42,7 @@
 | `test_rope_long_context_extrapolation` | Apply at position 4096 (well beyond max_seq=1024 training) | shape preserved, no NaN | finite check + atol 1e-3 vs naive computation | Numeric blowup at long positions when theta is mis-set |
 | `test_rope_determinism` | Same input twice | byte-identical | `torch.equal` | Hidden nondeterminism |
 
-**RoPE convention note (will be ADR-007):** Forge-LLM uses **Llama's interleaved convention** (rotate pairs `(x_{2i}, x_{2i+1})`), to match the HF oracle. Any deviation from this in `apply_rotary` is the #1 bug-source for RoPE.
+**RoPE convention note (ADR-007, amended 2026-05-28):** Forge-LLM uses the **HF Llama half-split convention** (rotate halves `(x[:d/2], x[d/2:])` via `y = x*cos + rotate_half(x)*sin`), to match `transformers.models.llama.modeling_llama.apply_rotary_pos_emb` bit-for-bit. The earlier version of this note prescribed Meta interleaved on the mistaken belief that HF used it; see ADR-007's Amendment block for the correction.
 
 ### 1.3 Vanilla MHA (`src/forge_llm/attention.py`, transitional)
 
