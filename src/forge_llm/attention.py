@@ -14,6 +14,7 @@ mixed-precision stability per CLAUDE.md sec 6.
 from __future__ import annotations
 
 import math
+from typing import Any
 
 import torch
 import torch.nn.functional as F
@@ -71,14 +72,20 @@ class GroupedQueryAttention(nn.Module):
         self,
         x: Tensor,
         freqs_cis: Tensor | None = None,
+        cache: Any = None,
+        input_pos: Tensor | None = None,
     ) -> Tensor:
-        """Causal self-attention.
+        """Causal self-attention with optional KV cache.
 
         Shape:
           ``x``:         ``(B, T, d_model)``
           ``freqs_cis``: ``None`` (M4 MHA without RoPE) or
-                         ``(max_seq, head_dim // 2)`` complex (applied to Q, K
-                         before the KV repeat and the matmul).
+                         ``(max_seq, head_dim // 2)`` complex.
+          ``cache``:     ``KVCache`` for this layer when generating with cache
+                         (M11). ``None`` for the standard full-sequence path.
+          ``input_pos``: ``(T,)`` int64 -- target positions in the cache for
+                         the new tokens. Required when ``cache`` is given.
+
         Returns ``(B, T, d_model)`` with the same dtype as ``x``.
         """
         bsz, seq_len, _ = x.shape
@@ -99,8 +106,27 @@ class GroupedQueryAttention(nn.Module):
             .transpose(1, 2)
         )
 
-        if freqs_cis is not None:
-            q, k = apply_rotary(q, k, freqs_cis)
+        if cache is not None:
+            if input_pos is None or freqs_cis is None:
+                raise ValueError("cache requires both input_pos and freqs_cis")
+            # RoPE at the exact target positions (the cache stores rotated K).
+            freqs_slice = freqs_cis[input_pos]
+            q, k = apply_rotary(q, k, freqs_slice)
+            k_full, v_full = cache.update(input_pos, k, v)
+            end = int(input_pos.max().item()) + 1
+            k = k_full[:, :, :end, :]
+            v = v_full[:, :, :end, :]
+            # Build the causal mask between new positions and cache positions.
+            cache_positions = torch.arange(end, device=x.device)
+            mask_bool = cache_positions[None, :] > input_pos[:, None]
+            mask = torch.zeros(
+                (input_pos.shape[0], end), dtype=q.dtype, device=q.device
+            )
+            mask.masked_fill_(mask_bool, float("-inf"))
+        else:
+            if freqs_cis is not None:
+                q, k = apply_rotary(q, k, freqs_cis)
+            mask = self._causal_mask[:seq_len, :seq_len]
 
         # MHA: n_rep == 1 -> no-op. GQA: each KV head is repeated n_rep times
         # so the matmul against Q lines up.
@@ -109,7 +135,7 @@ class GroupedQueryAttention(nn.Module):
             v = v.repeat_interleave(self.n_rep, dim=1)
 
         scores = torch.matmul(q, k.transpose(-2, -1)) * self.scale
-        scores = scores + self._causal_mask[:seq_len, :seq_len]
+        scores = scores + mask
 
         # Promote to at least fp32 for softmax stability; on fp32/fp64 inputs
         # this is a no-op so the value-vs-oracle test still hits bit-equality.

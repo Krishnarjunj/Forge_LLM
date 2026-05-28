@@ -68,6 +68,12 @@ class BPETokenizer:
         for i, (a, b) in enumerate(self._merges):
             new_id = _MIN_VOCAB + i
             self._id_to_bytes[new_id] = self._id_to_bytes[a] + self._id_to_bytes[b]
+        # Pad any vocab slot the training did not fill (small corpus, early
+        # break) with empty bytes -- the model's embedding table is sized at
+        # ``vocab_size`` and can still emit these ids during generation, so
+        # ``decode`` must not KeyError on them.
+        for i in range(_MIN_VOCAB + len(self._merges), self._vocab_size):
+            self._id_to_bytes[i] = b""
 
     @property
     def vocab_size(self) -> int:
@@ -204,13 +210,19 @@ class BPETokenizer:
         *,
         skip_special_tokens: bool = False,
     ) -> str:
-        """Decode a sequence of token ids back to text."""
+        """Decode a sequence of token ids back to text.
+
+        Uses ``errors="replace"`` so a partial UTF-8 sequence (e.g. one byte
+        of a multi-byte glyph sampled mid-generation) yields ``\\ufffd`` rather
+        than raising. Round-trip on valid input is unaffected: encode emits
+        the input's own UTF-8 bytes, which always decode back losslessly.
+        """
         parts: list[bytes] = []
         for tid in ids:
             if skip_special_tokens and tid in _SPECIAL_IDS:
                 continue
             parts.append(self._id_to_bytes[tid])
-        return b"".join(parts).decode("utf-8")
+        return b"".join(parts).decode("utf-8", errors="replace")
 
     def save(self, path: str | Path) -> None:
         """Write the tokenizer to ``path`` as JSON."""

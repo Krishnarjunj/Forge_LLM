@@ -15,6 +15,8 @@ Initialisation follows the recipe in docs/01_architecture.md sec 7:
 
 from __future__ import annotations
 
+from typing import Any
+
 import torch
 from torch import Tensor, nn
 
@@ -53,14 +55,24 @@ class ForgeModel(nn.Module):
         )
         self.register_buffer("freqs_cis", freqs, persistent=False)
 
-    def forward(self, input_ids: Tensor) -> Tensor:
+    def forward(
+        self,
+        input_ids: Tensor,
+        cache: Any = None,
+        input_pos: Tensor | None = None,
+    ) -> Tensor:
         """Embed -> stack of blocks -> final RMSNorm.
 
         Shape: ``input_ids`` is ``(B, T)`` int; returns ``(B, T, d_model)``.
+
+        ``cache``: an ``nn.ModuleList`` of per-layer ``KVCache`` from
+        ``KVCache.allocate(config, max_batch)``; required together with
+        ``input_pos`` for the M11 cached-generation path.
         """
         x = self.embed_tokens(input_ids)
-        for block in self.layers:
-            x = block(x, self.freqs_cis)
+        for i, block in enumerate(self.layers):
+            layer_cache = cache[i] if cache is not None else None
+            x = block(x, self.freqs_cis, cache=layer_cache, input_pos=input_pos)
         return self.norm(x)
 
 
@@ -99,10 +111,15 @@ class ForgeForCausalLM(nn.Module):
                 block.attn.wo.weight.mul_(scale)
                 block.mlp.w_down.weight.mul_(scale)
 
-    def forward(self, input_ids: Tensor) -> Tensor:
+    def forward(
+        self,
+        input_ids: Tensor,
+        cache: Any = None,
+        input_pos: Tensor | None = None,
+    ) -> Tensor:
         """Run the trunk and project to vocab logits.
 
         Shape: ``input_ids`` is ``(B, T)`` int; returns ``(B, T, vocab_size)``.
         """
-        hidden = self.model(input_ids)
+        hidden = self.model(input_ids, cache=cache, input_pos=input_pos)
         return self.lm_head(hidden)
